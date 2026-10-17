@@ -61,7 +61,7 @@
     async check() {
       if (!/^https?:/.test(global.location ? global.location.protocol : '')) return (this.available = false);
       try {
-        const r = await fetchTimeout('api/health', {}, 800);
+        const r = await fetchTimeout('../api/health', {}, 800);
         this.available = r.ok;
       } catch (e) { this.available = false; }
       return this.available;
@@ -69,7 +69,7 @@
     async equity(hole, board, ranges, iters) {
       if (!this.available) return null;
       try {
-        const r = await fetchTimeout('api/equity', {
+        const r = await fetchTimeout('../api/equity', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ hole, board, ranges, iters }),
         }, 2500);

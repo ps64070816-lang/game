@@ -138,6 +138,50 @@
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.25);
       this.out(g, null, 0.5);
     },
+    /** 가야금 느낌의 뜯는 소리 (농현: 살짝 떨림) */
+    gayageum(m, t, dur, vel, bend) {
+      const g = this.ctx.createGain();
+      const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 3;
+      lp.frequency.setValueAtTime(4200, t); lp.frequency.exponentialRampToValueAtTime(700, t + 0.35);
+      const f = mtof(m);
+      const o1 = this.osc('triangle', f, t, dur + 0.8, lp);
+      const o2 = this.osc('sawtooth', f, t, dur + 0.8, lp); o2.detune.value = 4;
+      const vib = this.osc('sine', 5.5, t, dur + 0.8); const vg = this.ctx.createGain();
+      vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.012, t + 0.25);
+      vib.connect(vg); vg.connect(o1.frequency); vg.connect(o2.frequency);
+      if (bend) { o1.frequency.setValueAtTime(f * 1.06, t); o1.frequency.exponentialRampToValueAtTime(f, t + 0.12); }
+      lp.connect(g);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2 * vel, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.7);
+      this.out(g, null, 0.45);
+    },
+    /** 대금/피리 느낌의 긴 선율 */
+    daegeum(m, t, dur, vel) {
+      const g = this.ctx.createGain();
+      const f = mtof(m);
+      const o = this.osc('sine', f, t, dur + 0.3, g);
+      const vib = this.osc('sine', 4.8, t, dur + 0.3); const vg = this.ctx.createGain(); vg.gain.value = f * 0.01;
+      vib.connect(vg); vg.connect(o.frequency);
+      const n = this.ctx.createGain(); n.gain.value = 0.3; this.osc('triangle', f * 2, t, dur + 0.3, n); n.connect(g);
+      this.noiseHit(t, 0.12, 'bandpass', f * 2, 2, 0.03 * vel);
+      this.env(g, t, 0.08, 0.09 * vel, 0.2, 0.75, 0.25, dur);
+      this.out(g, null, 0.5);
+    },
+    /** 장구: 덩(양편) / 쿵(북편) / 덕(채편) */
+    janggu(kind, t, vel) {
+      vel = vel || 1;
+      if (kind === 'kung' || kind === 'deong') {
+        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+        o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.25);
+        g.gain.setValueAtTime(0.55 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+        o.connect(g); o.start(t); o.stop(t + 0.45); this.out(g, null, 0.2);
+      }
+      if (kind === 'deok' || kind === 'deong') {
+        this.noiseHit(t, 0.07, 'bandpass', 2600, 3, 0.45 * vel, null, 0.25);
+        this.osc('triangle', 520, t, 0.05, (() => { const g = this.ctx.createGain(); g.gain.setValueAtTime(0.16 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06); this.out(g); return g; })());
+      }
+      if (kind === 'giduk') { this.noiseHit(t, 0.04, 'bandpass', 3000, 4, 0.25 * vel); }
+    },
     noiseHit(t, dur, type, freq, q, vel, dest, wet) {
       const s = this.ctx.createBufferSource(); s.buffer = this.noise;
       const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q || 1;
@@ -189,10 +233,11 @@
     schedule() {
       if (!this.track || !this.ctx) return;
       const tr = this.track;
-      const stepDur = 60 / tr.bpm / 4;
+      const stepDur = 60 / tr.bpm / (tr.stepsPerBeat || 4);
+      const steps = tr.steps || 16;
       while (this.nextTime < this.ctx.currentTime + 0.15) {
-        const s = this.step % 16;
-        const bar = Math.floor(this.step / 16);
+        const s = this.step % steps;
+        const bar = Math.floor(this.step / steps);
         const swing = (s % 2 === 1) ? stepDur * (tr.swing || 0) : 0;
         const t = this.nextTime + swing;
         const chord = tr.chords[bar % tr.chords.length];
@@ -202,7 +247,7 @@
         this.bgmBus = prevBus;
         this.nextTime += stepDur;
         this.step++;
-        if (tr.once && this.step >= tr.once * 16) { this.track = null; break; }
+        if (tr.once && this.step >= tr.once * steps) { this.track = null; break; }
       }
     },
 
@@ -246,6 +291,17 @@
           break;
         case 'turn': [76, 83].forEach((m, i) => this.bell(m, t + i * 0.12, 1.4, S)); break;
         case 'click': tone('square', 1200, t, 0.03, 0.05); break;
+        case 'slap': // 화투 패를 바닥에 '탁!' 치는 소리
+          this.noiseHit(t, 0.09, 'lowpass', 2200, 1.5, 0.9, S);
+          this.noiseHit(t, 0.03, 'highpass', 4000, 1, 0.35, S);
+          tone('sine', 160, t, 0.08, 0.35, 70);
+          break;
+        case 'bigslap':
+          this.noiseHit(t, 0.16, 'lowpass', 1800, 1.5, 1.2, S);
+          tone('sine', 120, t, 0.18, 0.6, 50);
+          this.noiseHit(t + 0.02, 0.05, 'highpass', 3500, 1, 0.5, S);
+          break;
+        case 'gong': [55, 62, 67].forEach((m, i) => this.bell(m, t + i * 0.01, 2.2, S)); this.kick(t, 1, S); break;
         case 'win': [72, 76, 79, 84].forEach((m, i) => this.bell(m, t + i * 0.09, 1.6, S)); this.sfx('chips'); break;
         case 'lose': [67, 63, 60].forEach((m, i) => tone('triangle', mtof(m), t + i * 0.18, 0.3, 0.12)); break;
         case 'level': [79, 84, 88, 91].forEach((m, i) => this.bell(m, t + i * 0.07, 1.4, S)); break;
@@ -336,6 +392,45 @@
         if (s === 0) c.v.forEach((m) => this.strings(m, t, sd * 15, 1));
         if (s % 4 === 2) this.hat(t, 0.6);
         if (s % 2 === 1) this.bell(c.v[s % 3] + 24, t, 0.3);
+      },
+    },
+    // 고스톱 하수: 굿거리 장단 (12/8, 흥겨운 평조 5음계)
+    gutgeori: {
+      bpm: 76, steps: 12, stepsPerBeat: 3, swing: 0, gain: 0.95,
+      chords: [ch(43, [67, 69, 71, 74, 76]), ch(48, [72, 74, 76, 79, 81]), ch(50, [74, 76, 79, 81, 83]), ch(43, [67, 71, 74, 76, 79])],
+      step(s, t, c, bar, sd) {
+        const pat = { 0: 'deong', 3: 'giduk', 4: 'deok', 6: 'kung', 9: 'deok', 10: 'giduk' };
+        if (pat[s]) this.janggu(pat[s], t, s === 0 ? 1 : 0.8);
+        if (s === 0 || s === 6) this.bass(c.r, t, sd * 5, 0.7);
+        const mel = [0, -1, 2, 1, -1, 3, 4, -1, 2, 3, -1, 1];
+        const k = mel[(s + bar * 5) % 12];
+        if (k >= 0 && Math.random() < 0.85) this.gayageum(c.v[k], t, sd * 2, 1, s === 0);
+        if (s === 0 && bar % 2 === 1) this.daegeum(c.v[4] + 12, t, sd * 10, 0.8);
+      },
+    },
+    // 고스톱 중수: 세마치 장단 (빠르고 경쾌)
+    semachi: {
+      bpm: 108, steps: 9, stepsPerBeat: 3, swing: 0, gain: 0.9,
+      chords: [ch(45, [69, 72, 74, 76, 79]), ch(43, [67, 69, 72, 74, 76]), ch(41, [65, 69, 72, 74, 77]), ch(40, [64, 67, 69, 71, 76])],
+      step(s, t, c, bar, sd) {
+        const pat = { 0: 'deong', 3: 'deong', 5: 'deok', 6: 'kung', 7: 'deok' };
+        if (pat[s]) this.janggu(pat[s], t, 0.9);
+        if (s === 0) this.pluckBass(c.r, t, sd * 2, 1);
+        if (s === 6) this.pluckBass(c.r + 7, t, sd * 2, 0.9);
+        if (s % 2 === 0) this.gayageum(c.v[(s / 2 + bar) % 5], t, sd * 1.5, 0.9);
+        if (s === 0) this.daegeum(c.v[(bar * 2) % 5] + 12, t, sd * 4, 0.7);
+      },
+    },
+    // 고스톱 고수: 진양조 느낌 (느리고 비장한 계면조)
+    jinyang: {
+      bpm: 54, steps: 12, stepsPerBeat: 3, swing: 0, gain: 1,
+      chords: [ch(40, [64, 67, 69, 71, 74]), ch(45, [69, 72, 74, 76, 79]), ch(38, [62, 64, 67, 69, 71]), ch(40, [64, 67, 71, 74, 76])],
+      step(s, t, c, bar, sd) {
+        if (s === 0) { this.janggu('deong', t, 1); c.v.slice(0, 3).forEach((m) => this.pad(m - 12, t, sd * 11, 0.8, 700)); this.bass(c.r - 12, t, sd * 10, 1); }
+        if (s === 6) this.janggu('kung', t, 0.7);
+        if (s === 9) this.janggu('deok', t, 0.6);
+        if (s === 0 || s === 4 || s === 8) this.gayageum(c.v[(s / 4 + bar) % 5], t, sd * 4, 0.9, true);
+        if (s === 2 && bar % 2 === 0) this.daegeum(c.v[3] + 12, t, sd * 8, 0.9);
       },
     },
     // 승리

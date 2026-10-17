@@ -87,7 +87,7 @@
     ],
   };
 
-  const avatarSrc = (id, mood) => `assets/avatars/${id}_${mood || 'calm'}.svg`;
+  const avatarSrc = (id, mood) => `../assets/avatars/${id}_${mood || 'calm'}.svg`;
 
   global.Roster = { STAGES, CHARACTERS, avatarSrc };
 })(typeof window !== 'undefined' ? window : globalThis);

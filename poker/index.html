@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>LAS VEGAS HOLD'EM — 라스베가스 텍사스 홀덤</title>
+  <meta name="description" content="라스베가스 분위기의 노리밋 텍사스 홀덤 토너먼트. 하수 → 중수 → 고수 AI를 차례로 꺾어라!">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Monoton&family=Noto+Sans+KR:wght@400;500;700;900&family=Orbitron:wght@500;700;900&family=Pacifico&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 라스베가스 밤하늘 -->
+  <div id="sky">
+    <div class="stars"></div>
+    <div class="searchlight l"></div>
+    <div class="searchlight r"></div>
+    <svg id="skyline" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true"></svg>
+  </div>
+
+  <!-- ================= 로비 ================= -->
+  <section id="lobby" class="screen active">
+    <div class="vegas-sign" aria-hidden="true">
+      <div class="welcome">WELCOME TO</div>
+      <div class="fab">Fabulous</div>
+      <div class="lv"><span>L</span><span>A</span><span>S</span> VEGAS</div>
+      <div class="nev">★ TEXAS HOLD'EM ★</div>
+    </div>
+    <h1 class="neon-title">
+      <span class="t1">LAS VEGAS</span>
+      <span class="t2">HOLD'EM POKER</span>
+      <span class="t3">라스베가스 텍사스 홀덤 · 노리밋 토너먼트</span>
+    </h1>
+
+    <div class="lobby-grid">
+      <div class="panel">
+        <h3>🎩 플레이어</h3>
+        <div class="field">
+          <label for="pName">닉네임</label>
+          <input id="pName" type="text" maxlength="10" placeholder="플레이어">
+        </div>
+        <div class="field">
+          <label>아바타</label>
+          <div class="av-pick">
+            <button data-g="M"><img src="../assets/avatars/player_m_calm.svg" alt="남성 아바타">남성</button>
+            <button data-g="F"><img src="../assets/avatars/player_f_calm.svg" alt="여성 아바타">여성</button>
+          </div>
+        </div>
+        <div class="vip"><small>VIP POINTS</small><b id="vipPts">0</b></div>
+        <button class="btn-small" id="btnRules">📖 게임 방법 &amp; 족보</button>
+        <button class="btn-small" id="btnReset">↺ 진행 상황 초기화</button>
+        <a class="btn-small" href="../index.html" style="display:block;text-align:center;text-decoration:none">🎴 고스톱으로 돌아가기</a>
+      </div>
+
+      <div class="stages" id="stageList"></div>
+
+      <div class="panel">
+        <h3>⚙️ 테이블 설정</h3>
+        <div class="field">
+          <label for="optSize">테이블 인원</label>
+          <select id="optSize">
+            <option value="6">6인 (6-Max · 숏핸드)</option>
+            <option value="9">9인 (풀링 · 카지노 표준)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="optSpeed">게임 속도</label>
+          <select id="optSpeed">
+            <option value="slow">느리게</option>
+            <option value="normal">보통</option>
+            <option value="fast">빠르게</option>
+            <option value="turbo">터보</option>
+          </select>
+        </div>
+        <div class="toggle-row">🎵 배경음악 (BGM)<label class="switch"><input type="checkbox" id="optBgm"><span></span></label></div>
+        <div class="toggle-row">🔔 효과음<label class="switch"><input type="checkbox" id="optSfx"><span></span></label></div>
+        <div class="toggle-row">🗣️ 한국어 음성<label class="switch"><input type="checkbox" id="optVoice"><span></span></label></div>
+        <div class="toggle-row">📊 승률 도우미<label class="switch"><input type="checkbox" id="optHelper"><span></span></label></div>
+        <div class="field" style="margin-top:10px;font-size:12px;color:#9a88c0" id="engineInfo">AI 엔진: 확인 중…</div>
+      </div>
+    </div>
+
+    <div class="lobby-foot">
+      하수 → 중수 → 고수 순서로 각 테이블의 모든 상대를 탈락시키면 다음 등급이 열립니다. ·
+      아바타: <a href="https://www.dicebear.com/styles/open-peeps/" target="_blank" rel="noopener">DiceBear Open Peeps</a> (CC0 퍼블릭 도메인) ·
+      카드/배경/음악/효과음은 코드로 직접 그리고 합성 (저작권 없음) · 폰트: Google Fonts (OFL)
+    </div>
+  </section>
+
+  <!-- ================= 게임 ================= -->
+  <section id="game" class="screen">
+    <header class="hud">
+      <span class="venue" id="hudVenue">FREMONT</span>
+      <span class="grade-chip" id="hudGrade">하수</span>
+      <span class="hud-item">블라인드<b id="hudBlinds">10/20</b></span>
+      <span class="hud-item">레벨업까지<b id="hudNext">10</b></span>
+      <span class="hud-item">핸드<b id="hudHand">#1</b></span>
+      <span class="hud-item">생존<b id="hudLeft">6/6</b></span>
+      <div class="hud-btns">
+        <button id="tBgm" title="배경음악">🎵</button>
+        <button id="tSfx" title="효과음">🔔</button>
+        <button id="tVoice" title="음성">🗣️</button>
+        <button id="tLog" title="핸드 기록">📜</button>
+        <button id="tRules" title="규칙">❓</button>
+        <button id="tQuit" title="로비로">🚪</button>
+      </div>
+    </header>
+
+    <div class="table-wrap" id="tableWrap">
+      <div class="table" id="table">
+        <div class="rail"></div>
+        <div class="felt">
+          <div class="felt-logo">LAS VEGAS<small>TEXAS HOLD'EM</small></div>
+        </div>
+        <div class="pot" id="pot"><small>POT</small><span id="potAmt">0</span></div>
+        <div class="board" id="board"></div>
+        <div class="table-msg" id="tableMsg"></div>
+        <div id="seats"></div>
+        <div id="bets"></div>
+        <div class="dealer-btn" id="dealerBtn">D</div>
+      </div>
+    </div>
+
+    <div class="action-bar wait" id="actionBar">
+      <div class="my-hand" id="myHand">카드를 기다리는 중…</div>
+      <div class="act-btns">
+        <button class="act fold" id="bFold">폴드<small>F</small></button>
+        <button class="act call" id="bCall">체크<small>C</small></button>
+        <button class="act raise" id="bRaise">레이즈<small id="raiseAmt">0</small></button>
+      </div>
+      <div class="raise-box">
+        <div class="presets" id="presets"></div>
+        <input type="range" id="raiseSlider" min="0" max="100" step="5" value="0" aria-label="레이즈 금액">
+        <div class="keys">단축키: F 폴드 · C/Space 체크·콜 · R 레이즈 · ↑↓ 금액 조절</div>
+      </div>
+    </div>
+    <aside class="log" id="log"></aside>
+  </section>
+
+  <!-- 연출 레이어 -->
+  <div id="flash"></div>
+  <canvas id="fx"></canvas>
+  <div id="banner" class="banner"><div class="b-title"></div><div class="b-sub"></div></div>
+  <div id="slot"><div class="reels"><div class="reel">7</div><div class="reel">7</div><div class="reel">7</div></div><div class="slot-text">JACKPOT</div></div>
+  <div id="modal" class="modal"><div class="modal-box" id="modalBox"></div></div>
+
+  <div class="start-overlay" id="startOverlay">
+    <h1 class="neon-title"><span class="t1">LAS VEGAS</span><span class="t2">HOLD'EM POKER</span></h1>
+    <div class="tap">▶ 클릭하여 카지노 입장</div>
+    <div style="font-size:12px;color:#9a88c0">사운드와 한국어 음성이 재생됩니다</div>
+  </div>
+
+  <script src="js/cards.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="../js/audio.js"></script>
+  <script src="../js/voice.js"></script>
+  <script src="../js/effects.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
