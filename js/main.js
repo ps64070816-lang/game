@@ -266,7 +266,8 @@
           <div class="eq"></div>
         </div>
         <div class="bubble"></div>
-        <div class="hand-label"></div>`;
+        <div class="hand-label"></div>
+        ${p.isHuman ? '<div class="made-badge"></div>' : ''}`;
       el.title = p.isHuman ? playerName() : `${p.name} — ${p.title}`;
       seatsEl.appendChild(el);
       S.seats.push(el);
@@ -398,13 +399,57 @@
   }
 
   /* ---------------- 내 패 정보 / 승률 도우미 ---------------- */
+  /**
+   * 메이드(스트레이트 이상 완성) 정보: 족보 + 메이드 강도 등급 + 승률
+   * 등급은 현재 보드에서 상대가 가질 수 있는 모든 홀카드 조합 중 나를 이기는 비율로 산정
+   */
+  function madeInfo(hole, board, numOpp) {
+    if (board.length < 3) return null;
+    const sc = C.evaluate(hole.concat(board));
+    const cat = C.category(sc);
+    if (cat < 4) return null;
+    if (board.length === 5 && C.evaluate(board) === sc) return null; // 보드 그대로 플레이 = 내 메이드 아님
+    const key = hole.join(',') + '|' + board.join(',') + '|' + numOpp;
+    if (S.madeCache && S.madeCache.key === key) return S.madeCache.info;
+    const used = new Set(hole.concat(board));
+    const rest = [];
+    for (let i = 0; i < 52; i++) if (!used.has(i)) rest.push(i);
+    let beat = 0, total = 0;
+    for (let a = 0; a < rest.length; a++) for (let b = a + 1; b < rest.length; b++) {
+      total++;
+      if (C.evaluate([rest[a], rest[b]].concat(board)) > sc) beat++;
+    }
+    const pct = beat / total;
+    const grade = beat === 0 ? ['넛', 'nuts'] : pct < 0.02 ? ['최상급', 'top'] : pct < 0.08 ? ['상급', 'high']
+      : pct < 0.2 ? ['중급', 'mid'] : ['하급', 'low'];
+    const eq = numOpp > 0 ? C.equity(hole, board, numOpp, 1500) : 1;
+    const info = { sc, cat, name: C.handName(sc), grade: grade[0], gradeCls: grade[1], beatPct: pct, eq };
+    S.madeCache = { key, info };
+    return info;
+  }
+  function renderMadeBadge(info) {
+    const badge = S.seats[0] && S.seats[0].querySelector('.made-badge');
+    if (!badge) return;
+    if (!info) { badge.classList.remove('show'); return; }
+    badge.className = 'made-badge show ' + info.gradeCls;
+    badge.innerHTML = `<span class="mb-tag">MADE</span><b>${info.name}</b><span class="mb-grade">${info.grade}</span><span class="mb-eq">${Math.round(info.eq * 100)}%</span>`;
+  }
+
   function updateMyHand() {
     const h = S.human, t = S.table;
     const el = $('#myHand');
-    if (!h || h.out) { el.innerHTML = '탈락'; return; }
-    if (!h.hole.length) { el.innerHTML = '카드를 기다리는 중…'; return; }
-    if (h.folded) { el.innerHTML = `<b>폴드</b> · 다음 핸드를 기다리는 중`; return; }
+    if (!h || h.out) { el.innerHTML = '탈락'; renderMadeBadge(null); return; }
+    if (!h.hole.length) { el.innerHTML = '카드를 기다리는 중…'; renderMadeBadge(null); return; }
+    if (h.folded) { el.innerHTML = `<b>폴드</b> · 다음 핸드를 기다리는 중`; renderMadeBadge(null); return; }
     let html;
+    const made = madeInfo(h.hole, t.board, t.contenders().length - 1);
+    renderMadeBadge(made);
+    if (made) {
+      el.innerHTML = `<span class="made-line">메이드: <b>${made.name}</b> · 등급 <b class="g-${made.gradeCls}">${made.grade}</b>`
+        + `${made.beatPct > 0 ? ` <small>(이기는 조합 ${(made.beatPct * 100).toFixed(1)}%)</small>` : ''}</span>`
+        + `<br>승률 <span class="eqv">${Math.round(made.eq * 100)}%</span> vs ${t.contenders().length - 1}명`;
+      return;
+    }
     if (t.board.length === 0) {
       const ch = C.chen(h.hole);
       const stars = '★'.repeat(Math.max(1, Math.min(5, Math.round(ch / 3)))) + '☆'.repeat(5 - Math.max(1, Math.min(5, Math.round(ch / 3))));
@@ -746,7 +791,9 @@
           const boardOnly = d.board.length === 5 ? C.category(C.evaluate(d.board)) : -1;
           if (cat >= 4 && cat > S.prevCat && cat > boardOnly) {
             const tier = cat >= 8 ? 'jackpot' : cat >= 6 ? 'great' : 'good';
-            FX.banner(C.handNameEn(sc), `${C.handName(sc)} 완성!`, tier, 1800);
+            const mi = madeInfo(h.hole, d.board, t.contenders().length - 1);
+            const extra = mi ? ` · ${mi.grade} · 승률 ${Math.round(mi.eq * 100)}%` : '';
+            FX.banner(C.handNameEn(sc), `${C.handName(sc)} 메이드!${extra}`, tier, 2400);
             A.sfx(cat >= 8 ? 'jackpot' : 'good');
             if (cat >= 6) FX.fireworks(3, 250); else FX.confetti(60);
             V.say(`${C.handName(sc)} 완성!`, 'dealer');

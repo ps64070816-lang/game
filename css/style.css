@@ -312,6 +312,26 @@ input, select { font-family: inherit; }
 .start-overlay .neon-title .t1 { font-size: clamp(28px, 6vw, 60px); }
 .start-overlay .tap { font-family: 'Black Han Sans', sans-serif; color: var(--gold); font-size: 20px; animation: flicker 2s infinite; }
 
+/* 메이드 배지 (내 자리) */
+.made-badge { position: absolute; bottom: calc(100% + 6px * var(--s)); left: 50%; transform: translateX(-50%) scale(0.6); opacity: 0; z-index: 8; pointer-events: none;
+  display: flex; align-items: center; gap: calc(6px * var(--s)); white-space: nowrap; padding: calc(4px * var(--s)) calc(10px * var(--s));
+  border-radius: 999px; background: rgba(10, 4, 25, 0.92); border: 2px solid var(--mb, var(--green)); font-size: calc(13px * var(--s));
+  box-shadow: 0 0 14px var(--mb, var(--green)); transition: transform 0.3s cubic-bezier(.2,1.6,.4,1), opacity 0.25s; }
+.made-badge.show { opacity: 1; transform: translateX(-50%) scale(1); }
+.made-badge .mb-tag { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 0.8em; color: #111; background: var(--mb, var(--green)); padding: 0 6px; border-radius: 6px; }
+.made-badge b { color: #fff; }
+.made-badge .mb-grade { font-weight: 900; color: var(--mb, var(--green)); }
+.made-badge .mb-eq { font-family: 'Orbitron', sans-serif; color: var(--cyan); }
+.made-badge.nuts { --mb: var(--gold); animation: nutsGlow 1.2s ease-in-out infinite alternate; }
+.made-badge.top { --mb: var(--pink); }
+.made-badge.high { --mb: var(--green); }
+.made-badge.mid { --mb: var(--cyan); }
+.made-badge.low { --mb: #ff9f1c; }
+@keyframes nutsGlow { to { box-shadow: 0 0 26px var(--gold), 0 0 6px #fff; } }
+.made-line b.g-nuts { color: var(--gold); } .made-line b.g-top { color: var(--pink); } .made-line b.g-high { color: var(--green); }
+.made-line b.g-mid { color: var(--cyan); } .made-line b.g-low { color: #ff9f1c; }
+.made-line small { color: #9a88c0; }
+
 /* 세로(모바일) 테이블 */
 .table.portrait .felt-logo { top: 20%; font-size: calc(24px * var(--s)); }
 .table.portrait .pot { top: 34%; }
